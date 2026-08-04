@@ -27,6 +27,7 @@ import { TranslatePipe } from '@ngx-translate/core';
 import { BluetoothTypes } from '../../../classes/devices/types';
 import { Preparation } from '../../../classes/preparation/preparation';
 import { PreparationDeviceType } from '../../../classes/preparationDevice';
+import { GaggimateParams } from '../../../classes/preparationDevice/gaggimate/gaggimateDevice';
 import { MeticulousParams } from '../../../classes/preparationDevice/meticulous/meticulousDevice';
 import { Move2Params } from '../../../classes/preparationDevice/move2/move2Device';
 import { PreparationDevice } from '../../../classes/preparationDevice/preparationDevice';
@@ -132,6 +133,12 @@ export class PreparationConnectedDeviceComponent {
         this.data.connectedPreparationDevice.type = PreparationDeviceType.MOVE2;
         this.data.connectedPreparationDevice.customParams = new Move2Params();
       }
+      if (this.data.type === PREPARATION_TYPES.GAGGIMATE) {
+        this.data.connectedPreparationDevice.type =
+          PreparationDeviceType.GAGGIMATE;
+        // this.data.connectedPreparationDevice.customParams =
+        //   new GaggimateParams();
+      }
     }
   }
 
@@ -166,6 +173,12 @@ export class PreparationConnectedDeviceComponent {
       this.data.connectedPreparationDevice.type === PreparationDeviceType.MOVE2
     ) {
       this.data.connectedPreparationDevice.customParams = new Move2Params();
+    } else if (
+      this.data.connectedPreparationDevice.type ===
+      PreparationDeviceType.GAGGIMATE
+    ) {
+      // this.data.connectedPreparationDevice.customParams =
+      //   new GaggimateParams();
     } else if (
       this.data.connectedPreparationDevice.type ===
         PreparationDeviceType.NONE ||

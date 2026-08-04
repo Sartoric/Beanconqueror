@@ -33,6 +33,7 @@ import { HistoryListingEntry } from '@meticulous-home/espresso-api/dist/types';
 import { TranslatePipe } from '@ngx-translate/core';
 import moment from 'moment';
 
+import { BrewModalImportShotGaggimateComponent } from '../../../app/brew/brew-modal-import-shot-gaggimate/brew-modal-import-shot-gaggimate.component';
 import { BrewModalImportShotGaggiuinoComponent } from '../../../app/brew/brew-modal-import-shot-gaggiuino/brew-modal-import-shot-gaggiuino.component';
 import { BrewModalImportShotMeticulousComponent } from '../../../app/brew/brew-modal-import-shot-meticulous/brew-modal-import-shot-meticulous.component';
 import { AppEvent } from '../../../classes/appEvent/appEvent';
@@ -48,6 +49,11 @@ import { PreparationDeviceBrew } from '../../../classes/brew/preparationDeviceBr
 import { Preparation } from '../../../classes/preparation/preparation';
 import { PreparationDeviceType } from '../../../classes/preparationDevice';
 import { BluetoothPreparationDevice } from '../../../classes/preparationDevice/bluetoothPreparationDevice';
+import {
+  GaggimateDevice,
+  GaggimateParams,
+} from '../../../classes/preparationDevice/gaggimate/gaggimateDevice';
+import { GaggimateShotData } from '../../../classes/preparationDevice/gaggimate/gaggimateShotData';
 import {
   GaggiuinoDevice,
   GaggiuinoParams,
@@ -81,6 +87,7 @@ import { UIAlert } from '../../../services/uiAlert';
 import { UIBrewHelper } from '../../../services/uiBrewHelper';
 import { UIBrewStorage } from '../../../services/uiBrewStorage';
 import { UIHelper } from '../../../services/uiHelper';
+import { UILog } from '../../../services/uiLog';
 import { UIPreparationHelper } from '../../../services/uiPreparationHelper';
 import { UIPreparationStorage } from '../../../services/uiPreparationStorage';
 import { UISettingsStorage } from '../../../services/uiSettingsStorage';
@@ -136,6 +143,7 @@ export class BrewBrewingPreparationDeviceComponent
     | MeticulousDevice
     | SanremoYOUDevice
     | GaggiuinoDevice
+    | GaggimateDevice
     | Move2Device = undefined;
 
   public activeConnectingDevice: PreparationDevice = undefined;
@@ -315,6 +323,12 @@ export class BrewBrewingPreparationDeviceComponent
     return device instanceof GaggiuinoDevice;
   }
 
+  public isGaggimateDevice(
+    device: PreparationDevice,
+  ): device is GaggimateDevice {
+    return device instanceof GaggimateDevice;
+  }
+
   public isMove2Device(device: PreparationDevice): device is Move2Device {
     return device instanceof Move2Device;
   }
@@ -341,6 +355,8 @@ export class BrewBrewingPreparationDeviceComponent
         await this.instanceGaggiuinoPreparationDevice(connectedDevice, _brew);
       } else if (connectedDevice instanceof Move2Device) {
         await this.instanceMove2PreparationDevice(connectedDevice, _brew);
+      } else if (connectedDevice instanceof GaggimateDevice) {
+        await this.instanceGaggimatePreparationDevice(connectedDevice, _brew);
       }
 
       this.checkChanges();
@@ -909,6 +925,39 @@ export class BrewBrewingPreparationDeviceComponent
         );**/
   }
 
+  private async instanceGaggimatePreparationDevice(
+    connectedDevice: GaggimateDevice,
+    _brew: Brew = null,
+  ) {
+    //TODO : Everything
+    if (
+      this.data.preparationDeviceBrew.type !==
+        PreparationDeviceType.GAGGIMATE ||
+      !this.data.preparationDeviceBrew.params
+    ) {
+      this.data.preparationDeviceBrew.type = PreparationDeviceType.GAGGIMATE;
+      this.data.preparationDeviceBrew.params = new GaggimateParams();
+    }
+
+    await this.uiAlert.showLoadingSpinner();
+    await connectedDevice.deviceConnected().then(
+      async () => {
+        await this.uiAlert.hideLoadingSpinner();
+        this.preparationDevice = connectedDevice as GaggimateDevice;
+      },
+      async () => {
+        await this.uiAlert.hideLoadingSpinner();
+        //Not connected
+        this.uiAlert.showMessage(
+          'PREPARATION_DEVICE.TYPE_GAGGIMATE.ERROR_CONNECTION_COULD_NOT_BE_ESTABLISHED',
+          'CARE',
+          'OK',
+          true,
+        );
+      },
+    );
+  }
+
   public async importShotFromMeticulous() {
     const meticulousDevice = this.preparationDevice as MeticulousDevice;
 
@@ -1149,6 +1198,29 @@ export class BrewBrewingPreparationDeviceComponent
     this.brewComponent.brewBrewingGraphEl.initializeFlowChart(true);
   }
 
+  public async importShotFromGaggimate() {
+    const modal = await this.modalController.create({
+      component: BrewModalImportShotGaggimateComponent,
+      id: BrewModalImportShotGaggimateComponent.COMPONENT_ID,
+      componentProps: {
+        gaggimateDevice: this.preparationDevice as GaggimateDevice,
+      },
+    });
+
+    await modal.present();
+    const rData = await modal.onWillDismiss();
+    if (rData && rData.data && rData.data.choosenData) {
+      const chosenEntry = rData.data.choosenData as GaggimateShotData;
+      this.generateShotFlowProfileFromGaggimateData(chosenEntry);
+    }
+  }
+
+  private generateShotFlowProfileFromGaggimateData(
+    chosenEntry: GaggimateShotData,
+  ) {
+    //
+  }
+
   public getPreparationDeviceType() {
     if (this.preparationDevice instanceof XeniaDevice) {
       return PreparationDeviceType.XENIA;
@@ -1158,11 +1230,14 @@ export class BrewBrewingPreparationDeviceComponent
       return PreparationDeviceType.SANREMO_YOU;
     } else if (this.preparationDevice instanceof Move2Device) {
       return PreparationDeviceType.MOVE2;
+    } else if (this.preparationDevice instanceof GaggimateDevice) {
+      return PreparationDeviceType.GAGGIMATE;
     }
     return PreparationDeviceType.NONE;
   }
 
   public preparationDeviceConnected(): boolean {
+    // UILog.getInstance().error('TEST:', [this.preparationDevice, this.data.preparationDeviceBrew.type]);
     if (
       this.preparationDevice &&
       this.data.preparationDeviceBrew.type !== PreparationDeviceType.NONE
