@@ -1118,7 +1118,7 @@
         "TYPE_GAGGIMATE": {
           "TITLE": "Gaggimate Machine",
           "LATEST_SHOTS": "Latest Shots",
-          "LATEST_SHOTS_DESCRIPTION": "How many latest shots to load from Gaggimate to the importer"
+          "LATEST_SHOTS_DESCRIPTION": "Select how many latest shots to load from Gaggimate to the importer"
         }
     },
     "DEVICE_CONNECTION": "Device connection",
