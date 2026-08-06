@@ -1116,7 +1116,9 @@
             "PREINFUSION_PAUSE_TIME": "Preinfusion Pause Time (s.s)"
         },
         "TYPE_GAGGIMATE": {
-          "TITLE": "Gaggimate Machine"
+          "TITLE": "Gaggimate Machine",
+          "LATEST_SHOTS": "Latest Shots",
+          "LATEST_SHOTS_DESCRIPTION": "How many latest shots to load from Gaggimate to the importer"
         }
     },
     "DEVICE_CONNECTION": "Device connection",

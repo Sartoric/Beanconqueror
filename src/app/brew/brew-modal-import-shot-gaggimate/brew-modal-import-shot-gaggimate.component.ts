@@ -27,7 +27,10 @@ import {
 import { TranslatePipe } from '@ngx-translate/core';
 import { AgVirtualScrollComponent } from 'ag-virtual-scroll';
 
-import { GaggimateDevice } from '../../../classes/preparationDevice/gaggimate/gaggimateDevice';
+import {
+  GaggimateDevice,
+  GaggimateParams,
+} from '../../../classes/preparationDevice/gaggimate/gaggimateDevice';
 import { GaggimateShotData } from '../../../classes/preparationDevice/gaggimate/gaggimateShotData';
 import { GraphDisplayCardComponent } from '../../../components/graph-display-card/graph-display-card.component';
 import { HeaderDismissButtonComponent } from '../../../components/header/header-dismiss-button.component';
@@ -105,7 +108,13 @@ export class BrewModalImportShotGaggimateComponent implements OnInit {
 
   public async fetchShotDetails(lastShotId: number) {
     const alldatatoPush = [];
-    for (let id = lastShotId; id >= Math.max(1, lastShotId - 5); id--) {
+
+    for (
+      let id = lastShotId;
+      id >=
+      Math.max(1, lastShotId - this.gaggimateDevice.getLatestShotsToImport());
+      id--
+    ) {
       try {
         const GaggimateShotDataEntry = new GaggimateShotData();
         const data = await this.gaggimateDevice.getShotData(id);

@@ -21,6 +21,7 @@ import {
   IBrewWeightFlow,
 } from '../../brew/brewFlow';
 import { Preparation } from '../../preparation/preparation';
+import { Move2Params } from '../move2/move2Device';
 import { PreparationDevice } from '../preparationDevice';
 import { GaggimateShotData } from './gaggimateShotData';
 
@@ -147,16 +148,26 @@ export class GaggimateDevice extends PreparationDevice {
   private logError(...args: any[]) {
     UILog.getInstance().error('Gaggimate device:', ...args);
   }
+
+  public getLatestShotsToImport(): number {
+    const customParams = this.getPreparation()?.connectedPreparationDevice
+      ?.customParams as GaggimateParams;
+    return customParams?.latestShotsToImport
+      ? customParams.latestShotsToImport
+      : 3;
+  }
 }
 
 export class GaggimateParams implements IGaggimateParams {
   public chosenProfileId: string;
   public chosenProfileName: string;
   public shotId: number;
+  public latestShotsToImport: number;
 
   constructor() {
     this.chosenProfileId = '';
     this.chosenProfileName = '';
-    this.shotId = 1;
+    this.shotId = 0;
+    this.latestShotsToImport = 1;
   }
 }
