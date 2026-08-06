@@ -932,8 +932,6 @@ export class BrewBrewingPreparationDeviceComponent
     connectedDevice: GaggimateDevice,
     _brew: Brew = null,
   ) {
-    //TODO : Everything
-
     if (
       this.data.preparationDeviceBrew.type !==
         PreparationDeviceType.GAGGIMATE ||

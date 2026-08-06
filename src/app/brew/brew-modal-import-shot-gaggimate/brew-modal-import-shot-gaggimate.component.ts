@@ -121,14 +121,14 @@ export class BrewModalImportShotGaggimateComponent implements OnInit {
 
         if (data !== null) {
           GaggimateShotDataEntry.id = id;
-          GaggimateShotDataEntry.timestamp = data.timestamp;
-          GaggimateShotDataEntry.profile = data.profile;
-          GaggimateShotDataEntry.profileId = data.profileId;
-          GaggimateShotDataEntry.duration = data.duration;
-          GaggimateShotDataEntry.avgFlow = data.avgFlow;
-          GaggimateShotDataEntry.avgTemp = data.avgTemp;
-          GaggimateShotDataEntry.volume = data.volume;
-          GaggimateShotDataEntry.notes = data.notes;
+          GaggimateShotDataEntry.timestamp = data.ts;
+          GaggimateShotDataEntry.profile = data.p;
+          GaggimateShotDataEntry.profileId = data.pid;
+          GaggimateShotDataEntry.duration = data.d;
+          GaggimateShotDataEntry.avgFlow = data.avf;
+          GaggimateShotDataEntry.avgTemp = data.avt;
+          GaggimateShotDataEntry.volume = data.v;
+          GaggimateShotDataEntry.notes = data.n;
 
           GaggimateShotDataEntry.brewFlow =
             GaggimateDevice.returnBrewFlowForShotData(data);

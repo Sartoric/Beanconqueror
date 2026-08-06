@@ -86,7 +86,7 @@ export class GaggimateDevice extends PreparationDevice {
     const brewFlow = new BrewFlow();
     const newMoment = moment(new Date()).startOf('day');
 
-    _shotData.rawdata.forEach((row) => {
+    _shotData.rd.forEach((row) => {
       const shotEntryTime = newMoment.clone().add(row[0] / 1000, 'seconds');
       const timestamp = shotEntryTime.format('HH:mm:ss.SSS');
 
