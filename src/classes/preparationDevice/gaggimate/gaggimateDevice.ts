@@ -1,5 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 
+import { time } from 'ionicons/icons';
+
 import { CapacitorHttp, HttpResponse } from '@capacitor/core';
 import Api, { ActionType, ProfileIdent } from '@meticulous-home/espresso-api';
 import {
@@ -57,7 +59,6 @@ export class GaggimateDevice extends PreparationDevice {
         connectTimeout: 5000,
       };
       const response: HttpResponse = await CapacitorHttp.get(options);
-      this.logError('deviceconnected debug', response);
       return response.status === 200;
     } catch (error) {
       this.logError('Error in connection:', error);
@@ -68,7 +69,7 @@ export class GaggimateDevice extends PreparationDevice {
   public async getLastShotId(): Promise<number> {
     try {
       const options = {
-        url: this.connectionURL + '/api/history/latest',
+        url: this.connectionURL + '/api/history/latestShotId',
         connectTimeout: 5000,
       };
       const response: HttpResponse = await CapacitorHttp.get(options);
@@ -82,7 +83,47 @@ export class GaggimateDevice extends PreparationDevice {
 
   public static returnBrewFlowForShotData(_shotData) {
     const brewFlow = new BrewFlow();
-    brewFlow.weight = [];
+    const newMoment = moment(new Date()).startOf('day');
+
+    _shotData.rawdata.forEach((row) => {
+      const shotEntryTime = newMoment.clone().add(row[0] / 1000, 'seconds');
+      const timestamp = shotEntryTime.format('HH:mm:ss.SSS');
+
+      // const brewTimeMs = row[0];
+      // const brewTimeStr = (brewTimeMs / 1000).toFixed(2);
+      // const timestampStr = new Date(brewTimeMs).toISOString();
+
+      brewFlow.weight.push({
+        timestamp: timestamp,
+        brew_time: '',
+        actual_weight: row[4],
+        old_weight: 0,
+        actual_smoothed_weight: 0,
+        old_smoothed_weight: 0,
+        calculated_real_flow: 0,
+        not_mutated_weight: 0,
+      });
+
+      brewFlow.pressureFlow.push({
+        actual_pressure: row[2],
+        old_pressure: 0,
+        brew_time: '',
+        timestamp: timestamp,
+      });
+
+      brewFlow.waterFlow.push({
+        value: row[3],
+        brew_time: '',
+        timestamp: timestamp,
+      });
+
+      brewFlow.temperatureFlow.push({
+        actual_temperature: row[1],
+        old_temperature: 0,
+        brew_time: '',
+        timestamp: timestamp,
+      });
+    });
     return brewFlow;
   }
 
@@ -109,12 +150,12 @@ export class GaggimateDevice extends PreparationDevice {
 }
 
 export class GaggimateParams implements IGaggimateParams {
-  public chosenProfileId: number;
+  public chosenProfileId: string;
   public chosenProfileName: string;
   public shotId: number;
 
   constructor() {
-    this.chosenProfileId = 1;
+    this.chosenProfileId = '';
     this.chosenProfileName = '';
     this.shotId = 1;
   }

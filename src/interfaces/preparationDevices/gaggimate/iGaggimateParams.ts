@@ -1,5 +1,5 @@
 export interface IGaggimateParams {
-  chosenProfileId: number;
+  chosenProfileId: string;
   chosenProfileName: string;
   shotId: number;
 }

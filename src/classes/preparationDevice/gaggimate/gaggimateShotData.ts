@@ -13,7 +13,8 @@ export class GaggimateShotData implements IGaggimateShotData {
   public avgTemp: number;
   public maxPressure: number;
   public avgFlow: number;
-  public notes: string;
+  public notes: any;
+  public brewFlow: BrewFlow;
 
   constructor() {
     this.id = 0;
@@ -27,6 +28,7 @@ export class GaggimateShotData implements IGaggimateShotData {
     this.avgTemp = 0;
     this.maxPressure = 0;
     this.avgFlow = 0;
-    this.notes = '';
+    this.notes = {};
+    this.brewFlow = new BrewFlow();
   }
 }

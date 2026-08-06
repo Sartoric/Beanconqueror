@@ -12,5 +12,6 @@ export interface IGaggimateShotData {
   avgTemp: number;
   maxPressure: number;
   avgFlow: number;
-  notes: string;
+  notes: any;
+  brewFlow: BrewFlow;
 }
