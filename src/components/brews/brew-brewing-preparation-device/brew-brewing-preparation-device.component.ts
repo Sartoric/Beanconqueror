@@ -1227,7 +1227,7 @@ export class BrewBrewingPreparationDeviceComponent
     if (shotData.profile && this.isProfileParameterActive()) {
       this.brewComponent.data.pressure_profile = shotData.profile;
     }
-    // TODO: USE TARGET TEMP
+
     if (shotData.avgTemp) {
       this.brewComponent.data.brew_temperature = shotData.avgTemp;
     }
