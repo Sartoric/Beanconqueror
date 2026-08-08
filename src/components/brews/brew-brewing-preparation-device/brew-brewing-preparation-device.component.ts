@@ -1227,6 +1227,7 @@ export class BrewBrewingPreparationDeviceComponent
     if (shotData.profile && this.isProfileParameterActive()) {
       this.brewComponent.data.pressure_profile = shotData.profile;
     }
+    // TODO: USE TARGET TEMP
     if (shotData.avgTemp) {
       this.brewComponent.data.brew_temperature = shotData.avgTemp;
     }
@@ -1274,7 +1275,7 @@ export class BrewBrewingPreparationDeviceComponent
       this.brewComponent.brewFirstDripTime?.changeEvent();
     }
 
-    this.brewComponent.timer?.setTime(0, shotData.duration);
+    this.brewComponent.timer?.setTime(shotData.duration / 1000, 0);
     this.brewComponent.timer?.changeEvent();
 
     this.brewComponent.brewBrewingGraphEl.flow_profile_raw = newBrewFlow;

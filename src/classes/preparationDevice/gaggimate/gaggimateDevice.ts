@@ -1,49 +1,36 @@
 import { HttpClient } from '@angular/common/http';
 
-import { time } from 'ionicons/icons';
-
 import { CapacitorHttp, HttpResponse } from '@capacitor/core';
-import Api, { ActionType, ProfileIdent } from '@meticulous-home/espresso-api';
-import {
-  HistoryEntry,
-  HistoryListingEntry,
-} from '@meticulous-home/espresso-api/dist/types';
-import { Profile } from '@meticulous-home/espresso-profile';
+import { padStart } from 'lodash';
 import moment from 'moment';
 
 import { IGaggimateParams } from '../../../interfaces/preparationDevices/gaggimate/iGaggimateParams';
+import { IGaggimateShotNotes } from '../../../interfaces/preparationDevices/gaggimate/iGaggimateShotNotes';
 import { UILog } from '../../../services/uiLog';
-import {
-  BrewFlow,
-  IBrewPressureFlow,
-  IBrewRealtimeWaterFlow,
-  IBrewTemperatureFlow,
-  IBrewWeightFlow,
-} from '../../brew/brewFlow';
+import { BrewFlow } from '../../brew/brewFlow';
 import { Preparation } from '../../preparation/preparation';
-import { Move2Params } from '../move2/move2Device';
 import { PreparationDevice } from '../preparationDevice';
-import { GaggimateShotData } from './gaggimateShotData';
+import { GaggimateParser } from './gaggimateParser';
+
+const SHOT_LOG_SAMPLE_INTERVAL_MS = 250; // nominal recording interval
+
+// import { GaggimateApiService } from './gaggimateApiService';
 
 declare var cordova;
 
 export class GaggimateDevice extends PreparationDevice {
+  private parser = new GaggimateParser();
   private connectionURL: string;
   private _isConnected = false;
-  private gaggimateShotData: GaggimateShotData = undefined;
-  private metApi: Api = undefined;
 
   constructor(
     protected httpClient: HttpClient,
     _preparation: Preparation,
   ) {
     super(httpClient, _preparation);
-    this.gaggimateShotData = undefined;
+
     this.connectionURL = this.getPreparation().connectedPreparationDevice.url;
-    this.metApi = new Api(
-      undefined,
-      _preparation.connectedPreparationDevice.url,
-    );
+
     if (typeof cordova !== 'undefined') {
       //
     }
@@ -67,37 +54,18 @@ export class GaggimateDevice extends PreparationDevice {
     }
   }
 
-  public async getLastShotId(): Promise<number> {
-    try {
-      const options = {
-        url: this.connectionURL + '/api/history/latestShotId',
-        connectTimeout: 5000,
-      };
-      const response: HttpResponse = await CapacitorHttp.get(options);
-      const responseJSON = await response.data;
-      return Number(responseJSON.id);
-    } catch (error) {
-      this.logError('Gaggimate - Error in getLastShotId():', error);
-      return null;
-    }
-  }
-
-  public static returnBrewFlowForShotData(_shotData) {
+  public static returnBrewFlowForShotData(samples) {
     const brewFlow = new BrewFlow();
     const newMoment = moment(new Date()).startOf('day');
 
-    _shotData.rd.forEach((row) => {
-      const shotEntryTime = newMoment.clone().add(row[0] / 1000, 'seconds');
+    samples.forEach((row) => {
+      const shotEntryTime = newMoment.clone().add(row.t, 'millisecond');
       const timestamp = shotEntryTime.format('HH:mm:ss.SSS');
-
-      // const brewTimeMs = row[0];
-      // const brewTimeStr = (brewTimeMs / 1000).toFixed(2);
-      // const timestampStr = new Date(brewTimeMs).toISOString();
 
       brewFlow.weight.push({
         timestamp: timestamp,
         brew_time: '',
-        actual_weight: row[4],
+        actual_weight: (row.v ?? row.ev ?? 0) / 10,
         old_weight: 0,
         actual_smoothed_weight: 0,
         old_smoothed_weight: 0,
@@ -106,20 +74,20 @@ export class GaggimateDevice extends PreparationDevice {
       });
 
       brewFlow.pressureFlow.push({
-        actual_pressure: row[2],
+        actual_pressure: (row.cp ?? 0) / 10,
         old_pressure: 0,
         brew_time: '',
         timestamp: timestamp,
       });
 
       brewFlow.waterFlow.push({
-        value: row[3],
+        value: (row.fl ?? 0) / 100,
         brew_time: '',
         timestamp: timestamp,
       });
 
       brewFlow.temperatureFlow.push({
-        actual_temperature: row[1],
+        actual_temperature: (row.ct ?? 0) / 10,
         old_temperature: 0,
         brew_time: '',
         timestamp: timestamp,
@@ -128,21 +96,48 @@ export class GaggimateDevice extends PreparationDevice {
     return brewFlow;
   }
 
-  public async getShotData(_id: number) {
-    const options = {
-      url: this.connectionURL + '/api/history/get?id=' + _id,
-      connectTimeout: 5000,
-    };
-    const response: HttpResponse = await CapacitorHttp.get(options);
-    const responseJSON = await response.data;
+  public async getRecentShots() {
+    const response = await fetch(
+      this.connectionURL + '/api/history/recent.bin',
+    );
+
+    const buffer = await response.arrayBuffer();
     if (response.status === 404) {
       return null;
     }
-    return responseJSON;
+
+    const indexData = this.parser.parseBinaryIndex(buffer);
+    if (!indexData) {
+      return null;
+    }
+
+    return JSON.stringify(this.parser.indexToShotList(indexData));
   }
   catch(error) {
-    this.logError('Error in getShotData():', error);
+    this.logError('Error in getRecentShots():', error);
     return null;
+  }
+
+  public async getShotNotesFile(id: number) {
+    const response = await fetch(
+      this.connectionURL + `/api/history/${String(id)}.json`,
+    );
+    if (response.status === 404) {
+      return {};
+    }
+    return (await response.json()) as GaggimateShotNotes;
+  }
+
+  public async getShotSlog(id: number) {
+    const response = await fetch(
+      this.connectionURL + `/api/history/${padStart(String(id), 6, '0')}.slog`,
+    );
+
+    const buffer = await response.arrayBuffer();
+    if (response.status === 404) {
+      return null;
+    }
+    return this.parser.parseBinaryShot(buffer, id);
   }
 
   private logError(...args: any[]) {
@@ -156,6 +151,13 @@ export class GaggimateDevice extends PreparationDevice {
       ? customParams.latestShotsToImport
       : 3;
   }
+}
+
+export class GaggimateShotNotes implements IGaggimateShotNotes {
+  public grindSetting?: string;
+  public doseIn?: number;
+  public notes?: string;
+  public beanType?: string;
 }
 
 export class GaggimateParams implements IGaggimateParams {

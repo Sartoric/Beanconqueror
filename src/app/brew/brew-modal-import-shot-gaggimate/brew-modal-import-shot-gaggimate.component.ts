@@ -27,17 +27,13 @@ import {
 import { TranslatePipe } from '@ngx-translate/core';
 import { AgVirtualScrollComponent } from 'ag-virtual-scroll';
 
-import {
-  GaggimateDevice,
-  GaggimateParams,
-} from '../../../classes/preparationDevice/gaggimate/gaggimateDevice';
+import { GaggimateDevice } from '../../../classes/preparationDevice/gaggimate/gaggimateDevice';
 import { GaggimateShotData } from '../../../classes/preparationDevice/gaggimate/gaggimateShotData';
 import { GraphDisplayCardComponent } from '../../../components/graph-display-card/graph-display-card.component';
 import { HeaderDismissButtonComponent } from '../../../components/header/header-dismiss-button.component';
 import { HeaderComponent } from '../../../components/header/header.component';
 import { UIAlert } from '../../../services/uiAlert';
 import { UIHelper } from '../../../services/uiHelper';
-import { UILog } from '../../../services/uiLog';
 
 @Component({
   selector: 'app-brew-modal-import-shot-gaggimate',
@@ -94,44 +90,56 @@ export class BrewModalImportShotGaggimateComponent implements OnInit {
   }
 
   private async readHistory() {
-    const lastShotId: number = await this.gaggimateDevice.getLastShotId();
-    if (lastShotId === null) {
-      //No shots have been done
-    } else {
-      await this.uiAlert.showLoadingSpinner();
-      await this.fetchShotDetails(lastShotId);
-      await this.uiAlert.hideLoadingSpinner();
-    }
+    // const lastShotId: number = await this.gaggimateDevice.getLastShotId();
+
+    // if (lastShotId === null) {
+    //   //No shots have been done
+    // } else {
+    await this.uiAlert.showLoadingSpinner();
+    await this.fetchShotDetails();
+    await this.uiAlert.hideLoadingSpinner();
+    // }
 
     this.retriggerScroll();
   }
 
-  public async fetchShotDetails(lastShotId: number) {
+  public async fetchShotDetails() {
     const alldatatoPush = [];
 
-    for (
-      let id = lastShotId;
-      id >=
-      Math.max(1, lastShotId - this.gaggimateDevice.getLatestShotsToImport());
-      id--
-    ) {
+    const recentShots = await this.gaggimateDevice.getRecentShots();
+
+    for (let i = 0; i < this.gaggimateDevice.getLatestShotsToImport(); i++) {
       try {
         const GaggimateShotDataEntry = new GaggimateShotData();
-        const data = await this.gaggimateDevice.getShotData(id);
+
+        const data = JSON.parse(recentShots)[i];
 
         if (data !== null) {
-          GaggimateShotDataEntry.id = id;
-          GaggimateShotDataEntry.timestamp = data.ts;
-          GaggimateShotDataEntry.profile = data.p;
-          GaggimateShotDataEntry.profileId = data.pid;
-          GaggimateShotDataEntry.duration = data.d;
-          GaggimateShotDataEntry.avgFlow = data.avf;
-          GaggimateShotDataEntry.avgTemp = data.avt;
-          GaggimateShotDataEntry.volume = data.v;
-          GaggimateShotDataEntry.notes = data.n;
+          // TODO : If a shot has been already imported ask if it should be imported again
+          GaggimateShotDataEntry.id = data.id;
+          GaggimateShotDataEntry.timestamp = data.timestamp;
+          GaggimateShotDataEntry.profile = data.profile;
+          GaggimateShotDataEntry.profileId = data.profileId;
+          GaggimateShotDataEntry.duration = data.duration;
+          GaggimateShotDataEntry.avgFlow = data.avgFlow;
+          GaggimateShotDataEntry.avgTemp = data.avgTemp;
+          GaggimateShotDataEntry.volume = data.volume;
+          GaggimateShotDataEntry.maxPressure = data.maxPressure;
+          GaggimateShotDataEntry.rating = data.rating ?? 0;
+          GaggimateShotDataEntry.incomplete = data.incomplete;
+
+          // Load the slog samples and the notes
+          const shotData = await this.gaggimateDevice.getShotSlog(data.id);
 
           GaggimateShotDataEntry.brewFlow =
-            GaggimateDevice.returnBrewFlowForShotData(data);
+            GaggimateDevice.returnBrewFlowForShotData(shotData.samples);
+
+          GaggimateShotDataEntry.notes =
+            await this.gaggimateDevice.getShotNotesFile(data.id);
+
+          if (data.hasNotes) {
+            // TODO: If the flag is correctly populated, we should load the notes only on true
+          }
 
           alldatatoPush.push(GaggimateShotDataEntry);
         }
