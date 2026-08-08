@@ -1237,7 +1237,7 @@ export class BrewBrewingPreparationDeviceComponent
     this.brewComponent.data.grind_weight = shotData.notes?.doseIn ?? '';
     this.brewComponent.data.note = shotData.notes?.notes ?? '';
 
-    // Select the bean from the storage, if any
+    // Select the bean, if any, from the storage based on GM shot notes
     this.brewComponent.data.bean = this.uiBeanStorage
       .getAllEntries()
       .filter(

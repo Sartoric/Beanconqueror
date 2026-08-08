@@ -12,10 +12,6 @@ import { Preparation } from '../../preparation/preparation';
 import { PreparationDevice } from '../preparationDevice';
 import { GaggimateParser } from './gaggimateParser';
 
-const SHOT_LOG_SAMPLE_INTERVAL_MS = 250; // nominal recording interval
-
-// import { GaggimateApiService } from './gaggimateApiService';
-
 declare var cordova;
 
 export class GaggimateDevice extends PreparationDevice {
@@ -65,7 +61,7 @@ export class GaggimateDevice extends PreparationDevice {
       brewFlow.weight.push({
         timestamp: timestamp,
         brew_time: '',
-        actual_weight: (row.v ?? row.ev ?? 0) / 10,
+        actual_weight: row.v ?? row.ev ?? 0,
         old_weight: 0,
         actual_smoothed_weight: 0,
         old_smoothed_weight: 0,
@@ -74,20 +70,20 @@ export class GaggimateDevice extends PreparationDevice {
       });
 
       brewFlow.pressureFlow.push({
-        actual_pressure: (row.cp ?? 0) / 10,
+        actual_pressure: row.cp ?? 0,
         old_pressure: 0,
         brew_time: '',
         timestamp: timestamp,
       });
 
       brewFlow.waterFlow.push({
-        value: (row.fl ?? 0) / 100,
+        value: row.fl ?? 0,
         brew_time: '',
         timestamp: timestamp,
       });
 
       brewFlow.temperatureFlow.push({
-        actual_temperature: (row.ct ?? 0) / 10,
+        actual_temperature: row.ct ?? 0,
         old_temperature: 0,
         brew_time: '',
         timestamp: timestamp,

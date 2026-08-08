@@ -1,8 +1,8 @@
 export class GaggimateParser {
   readonly HEADER_SIZE_V4 = 128;
   readonly HEADER_SIZE_V5 = 512;
-  readonly MAGIC = 0x544f4853; // 'SHOT' - matches backend SHOT_LOG_MAGIC
-
+  readonly SHOT_MAGIC = 0x544f4853; // 'SHOT' - matches backend SHOT_LOG_MAGIC
+  readonly INDEX_MAGIC = 0x58444953; // 'SIDX'
   readonly TEMP_SCALE = 10;
   readonly PRESSURE_SCALE = 10;
   readonly FLOW_SCALE = 100;
@@ -98,17 +98,11 @@ export class GaggimateParser {
   public parseBinaryIndex(arrayBuffer) {
     const INDEX_HEADER_SIZE = 32;
     const INDEX_ENTRY_SIZE = 128;
-    const INDEX_MAGIC = 0x58444953; // 'SIDX'
 
     // Index entry flags
     const SHOT_FLAG_COMPLETED = 0x01;
     const SHOT_FLAG_DELETED = 0x02;
     const SHOT_FLAG_HAS_NOTES = 0x04;
-
-    const WEIGHT_SCALE = 10;
-    const TEMP_SCALE = 10;
-    const PRESSURE_SCALE = 10;
-    const FLOW_SCALE = 100;
 
     const view = new DataView(arrayBuffer);
 
@@ -118,9 +112,9 @@ export class GaggimateParser {
 
     // Parse header
     const magic = view.getUint32(0, true);
-    if (magic !== INDEX_MAGIC) {
+    if (magic !== this.INDEX_MAGIC) {
       throw new Error(
-        `Invalid index magic: 0x${magic.toString(16)} (expected 0x${INDEX_MAGIC.toString(16)})`,
+        `Invalid index magic: 0x${magic.toString(16)} (expected 0x${this.INDEX_MAGIC.toString(16)})`,
       );
     }
 
@@ -166,7 +160,7 @@ export class GaggimateParser {
       const avgFlowRaw = view.getUint16(base + 100, true);
 
       // Convert volume from scaled integer to float
-      const volumeFloat = volume > 0 ? volume / WEIGHT_SCALE : null;
+      const volumeFloat = volume > 0 ? volume / this.WEIGHT_SCALE : null;
 
       entries.push({
         id,
@@ -177,10 +171,10 @@ export class GaggimateParser {
         flags,
         profileId,
         profileName,
-        avgTemp: avgTempRaw > 0 ? avgTempRaw / TEMP_SCALE : null,
+        avgTemp: avgTempRaw > 0 ? avgTempRaw / this.TEMP_SCALE : null,
         maxPressure:
-          maxPressureRaw > 0 ? maxPressureRaw / PRESSURE_SCALE : null,
-        avgFlow: avgFlowRaw > 0 ? avgFlowRaw / FLOW_SCALE : null,
+          maxPressureRaw > 0 ? maxPressureRaw / this.PRESSURE_SCALE : null,
+        avgFlow: avgFlowRaw > 0 ? avgFlowRaw / this.FLOW_SCALE : null,
         // Computed flags
         completed: !!(flags & SHOT_FLAG_COMPLETED),
         deleted: !!(flags & SHOT_FLAG_DELETED),
@@ -208,9 +202,9 @@ export class GaggimateParser {
     if (view.byteLength < 16) throw new Error('File too small for header');
 
     const magic = view.getUint32(0, true);
-    if (magic !== this.MAGIC)
+    if (magic !== this.SHOT_MAGIC)
       throw new Error(
-        `Bad magic: expected 0x${this.MAGIC.toString(16)}, got 0x${magic.toString(16)}`,
+        `Bad magic: expected 0x${this.SHOT_MAGIC.toString(16)}, got 0x${magic.toString(16)}`,
       );
 
     const version = view.getUint8(4);
