@@ -1282,16 +1282,28 @@ export class BrewBrewingPreparationDeviceComponent
     }
 
     // Normalize shotData.rating and scale proportionally to the maximum rating and step
-    const ratio = Math.min(Math.max(shotData.rating, 0), 5) / 5;
-    const scaledValue = ratio * this.settings.brew_rating;
+    // const ratio = Math.min(Math.max(shotData.rating, 0), 5) / 5;
+    // const scaledValue = ratio * this.settings.brew_rating;
+    // const step = this.settings.brew_rating_steps;
+    // const rating =
+    //   step > 0 ? Math.min(Math.round(scaledValue / step) * step, this.settings.brew_rating,) : scaledValue;
+
+    const minRating = -1;
+    const maxRating = this.settings.brew_rating;
     const step = this.settings.brew_rating_steps;
-    const rating =
-      step > 0
-        ? Math.min(
-            Math.round(scaledValue / step) * step,
-            this.settings.brew_rating,
-          )
-        : scaledValue;
+
+    const ratio = Math.min(Math.max(shotData.rating, 0), 5) / 5;
+    const scaledValue = minRating + ratio * (maxRating - minRating);
+    let rating: number;
+    if (step > 0) {
+      // Snap to the nearest step relative to minRating (-1)
+      const stepsFromMin = Math.round((scaledValue - minRating) / step);
+      const snapped = minRating + stepsFromMin * step;
+      // Clamp between minRating and maxRating
+      rating = Math.min(Math.max(snapped, minRating), maxRating);
+    } else {
+      rating = scaledValue;
+    }
 
     this.brewComponent.data.rating = parseFloat(rating.toFixed(4));
     this.brewComponent.changedRating();

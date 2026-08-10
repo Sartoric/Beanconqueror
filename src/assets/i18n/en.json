@@ -1039,7 +1039,7 @@
             "SANREMO_YOU": "Sanremo YOU",
             "GAGGIUINO": "Gaggiuino",
             "MOVE2": "Move 2",
-            "GAGGIMATE": "Gaggimate"
+            "GAGGIMATE": "GaggiMate"
         },
         "URL": "Url",
         "CHOOSE_DEVICE": "Choose device",
@@ -1116,9 +1116,9 @@
             "PREINFUSION_PAUSE_TIME": "Preinfusion Pause Time (s.s)"
         },
         "TYPE_GAGGIMATE": {
-          "TITLE": "Gaggimate Machine",
+          "TITLE": "GaggiMate Machine",
           "LATEST_SHOTS": "Latest Shots",
-          "LATEST_SHOTS_DESCRIPTION": "Select how many latest shots to load from Gaggimate to the importer"
+          "LATEST_SHOTS_DESCRIPTION": "Select how many latest shots to load from GaggiMate to the importer"
         }
     },
     "DEVICE_CONNECTION": "Device connection",
@@ -1759,7 +1759,7 @@
             ]
         }
     },
-  "PREPARATION_TYPE_GAGGIMATE": "Gaggimate",
-  "IMPORT_SHOT_FROM_GAGGIMATE": "Import a shot from Gaggimate",
+  "PREPARATION_TYPE_GAGGIMATE": "GaggiMate",
+  "IMPORT_SHOT_FROM_GAGGIMATE": "Import a shot from GaggiMate",
   "BREW_GRAPH_TIME_SLIDER": "Time slider"
 }
