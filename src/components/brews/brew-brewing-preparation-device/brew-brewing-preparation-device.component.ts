@@ -33,6 +33,7 @@ import { HistoryListingEntry } from '@meticulous-home/espresso-api/dist/types';
 import { TranslatePipe } from '@ngx-translate/core';
 import { round } from 'lodash';
 import moment from 'moment';
+import { NgxStarsComponent } from 'ngx-stars';
 
 import { BrewModalImportShotGaggimateComponent } from '../../../app/brew/brew-modal-import-shot-gaggimate/brew-modal-import-shot-gaggimate.component';
 import { BrewModalImportShotGaggiuinoComponent } from '../../../app/brew/brew-modal-import-shot-gaggiuino/brew-modal-import-shot-gaggiuino.component';
@@ -1222,7 +1223,9 @@ export class BrewBrewingPreparationDeviceComponent
   ) {
     const newBrewFlow = shotData.brewFlow;
     const lastEntry = newBrewFlow.weight[newBrewFlow.weight.length - 1];
-    this.brewComponent.data.brew_beverage_quantity = lastEntry.actual_weight;
+
+    this.brewComponent.data.brew_beverage_quantity =
+      lastEntry.actual_weight || (shotData.notes?.doseOut ?? 0);
 
     if (shotData.profile && this.isProfileParameterActive()) {
       this.brewComponent.data.pressure_profile = shotData.profile;
@@ -1234,18 +1237,21 @@ export class BrewBrewingPreparationDeviceComponent
 
     // Add grind settings and ground coffe and shot description from GM shot notes, if any
     this.brewComponent.data.grind_size = shotData.notes?.grindSetting ?? '';
-    this.brewComponent.data.grind_weight = shotData.notes?.doseIn ?? '';
+    this.brewComponent.data.grind_weight = shotData.notes?.doseIn ?? null;
     this.brewComponent.data.note = shotData.notes?.notes ?? '';
 
     // Select the bean, if any, from the storage based on GM shot notes
-    this.brewComponent.data.bean = this.uiBeanStorage
-      .getAllEntries()
-      .filter(
-        (bean) =>
-          bean.name.toLocaleLowerCase() ===
-          shotData.notes?.beanType?.toLocaleLowerCase(),
-      )
-      .sort((a, b) => a.name.localeCompare(b.name))[0]?.config?.uuid;
+    if (shotData.notes?.beanType) {
+      const foundBean = this.uiBeanStorage
+        .getAllEntries()
+        .filter(
+          (bean) =>
+            bean.name.toLocaleLowerCase() ===
+            shotData.notes?.beanType?.toLocaleLowerCase(),
+        )
+        .sort((a, b) => a.name.localeCompare(b.name))[0]?.config?.uuid;
+      if (foundBean) this.brewComponent.data.bean = foundBean;
+    }
 
     /**Set the custom creation date, the user needs to activate the parameter for custom creation date**/
     if (shotData.timestamp) {
@@ -1274,6 +1280,21 @@ export class BrewBrewingPreparationDeviceComponent
       );
       this.brewComponent.brewFirstDripTime?.changeEvent();
     }
+
+    // Normalize shotData.rating and scale proportionally to the maximum rating and step
+    const ratio = Math.min(Math.max(shotData.rating, 0), 5) / 5;
+    const scaledValue = ratio * this.settings.brew_rating;
+    const step = this.settings.brew_rating_steps;
+    const rating =
+      step > 0
+        ? Math.min(
+            Math.round(scaledValue / step) * step,
+            this.settings.brew_rating,
+          )
+        : scaledValue;
+
+    this.brewComponent.data.rating = parseFloat(rating.toFixed(4));
+    this.brewComponent.changedRating();
 
     this.brewComponent.timer?.setTime(shotData.duration / 1000, 0);
     this.brewComponent.timer?.changeEvent();
