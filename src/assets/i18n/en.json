@@ -1118,7 +1118,9 @@
         "TYPE_GAGGIMATE": {
           "TITLE": "GaggiMate Machine",
           "LATEST_SHOTS": "Latest Shots",
-          "LATEST_SHOTS_DESCRIPTION": "Select how many latest shots to load from GaggiMate to the importer"
+          "LATEST_SHOTS_DESCRIPTION": "Select how many latest shots to load from GaggiMate to the importer",
+          "ERROR_RECENT_SHOT_LIST_UNAVAILABLE": "Recent shots list unavailable, check the firmware version of your GaggiMate",
+          "ERROR_RECENT_SHOT_LIST_EMPTY": "No shots available"
         }
     },
     "DEVICE_CONNECTION": "Device connection",

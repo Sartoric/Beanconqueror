@@ -36,17 +36,32 @@ export class GaggimateDevice extends PreparationDevice {
     return this._isConnected;
   }
 
+  private isNonEmptyJsonObject(
+    value: unknown,
+  ): value is Record<string, unknown> {
+    if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+      return false;
+    }
+    const proto = Object.getPrototypeOf(value);
+    if (proto !== null && proto !== Object.prototype) {
+      return false;
+    }
+    return Object.keys(value).length > 0;
+  }
+
   async deviceConnected(): Promise<boolean> {
     try {
       const options = {
-        url: this.connectionURL + '/api/settings',
+        url: this.connectionURL + '/api/status',
         connectTimeout: 5000,
       };
       const response: HttpResponse = await CapacitorHttp.get(options);
-      return response.status === 200;
+      return (
+        response?.status === 200 && this.isNonEmptyJsonObject(response?.data)
+      );
     } catch (error) {
       this.logError('Error in connection:', error);
-      return null;
+      return false;
     }
   }
 
@@ -93,25 +108,25 @@ export class GaggimateDevice extends PreparationDevice {
   }
 
   public async getRecentShots() {
-    const response = await fetch(
-      this.connectionURL + '/api/history/recent.bin',
-    );
+    try {
+      const response = await fetch(
+        this.connectionURL + '/api/history/recent.bin',
+      );
 
-    const buffer = await response.arrayBuffer();
-    if (response.status === 404) {
+      const buffer = await response.arrayBuffer();
+      if (response.status === 404) {
+        return null;
+      }
+
+      const indexData = this.parser.parseBinaryIndex(buffer);
+      if (!indexData) {
+        return null;
+      }
+      return JSON.stringify(this.parser.indexToShotList(indexData));
+    } catch (error) {
+      this.logError('Error in getRecentShots():', error);
       return null;
     }
-
-    const indexData = this.parser.parseBinaryIndex(buffer);
-    if (!indexData) {
-      return null;
-    }
-
-    return JSON.stringify(this.parser.indexToShotList(indexData));
-  }
-  catch(error) {
-    this.logError('Error in getRecentShots():', error);
-    return null;
   }
 
   public async getShotNotesFile(id: number) {

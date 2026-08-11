@@ -90,15 +90,9 @@ export class BrewModalImportShotGaggimateComponent implements OnInit {
   }
 
   private async readHistory() {
-    // const lastShotId: number = await this.gaggimateDevice.getLastShotId();
-
-    // if (lastShotId === null) {
-    //   //No shots have been done
-    // } else {
     await this.uiAlert.showLoadingSpinner();
     await this.fetchShotDetails();
     await this.uiAlert.hideLoadingSpinner();
-    // }
 
     this.retriggerScroll();
   }
@@ -108,45 +102,66 @@ export class BrewModalImportShotGaggimateComponent implements OnInit {
 
     const recentShots = await this.gaggimateDevice.getRecentShots();
 
-    for (let i = 0; i < this.gaggimateDevice.getLatestShotsToImport(); i++) {
-      try {
-        const GaggimateShotDataEntry = new GaggimateShotData();
+    if (!recentShots) {
+      await this.uiAlert.showMessage(
+        'PREPARATION_DEVICE.TYPE_GAGGIMATE.ERROR_RECENT_SHOT_LIST_UNAVAILABLE',
+        'CARE',
+        'OK',
+        true,
+      );
+    }
 
-        const data = JSON.parse(recentShots)[i];
+    const recentShotsArray = JSON.parse(recentShots);
 
-        if (data !== null) {
-          // TODO : If a shot has been already imported ask if it should be imported again
-          GaggimateShotDataEntry.id = data.id;
-          GaggimateShotDataEntry.timestamp = data.timestamp;
-          GaggimateShotDataEntry.profile = data.profile;
-          GaggimateShotDataEntry.profileId = data.profileId;
-          GaggimateShotDataEntry.duration = data.duration;
-          GaggimateShotDataEntry.avgFlow = data.avgFlow;
-          GaggimateShotDataEntry.avgTemp = data.avgTemp;
-          GaggimateShotDataEntry.volume = data.volume;
-          GaggimateShotDataEntry.maxPressure = data.maxPressure;
-          GaggimateShotDataEntry.rating = data.rating ?? 0;
-          GaggimateShotDataEntry.incomplete = data.incomplete;
+    if (recentShotsArray.length === 0) {
+      await this.uiAlert.showMessage(
+        'PREPARATION_DEVICE.TYPE_GAGGIMATE.ERROR_RECENT_SHOT_LIST_EMPTY',
+        'CARE',
+        'OK',
+        true,
+      );
+    } else {
+      for (let i = 0; i < this.gaggimateDevice.getLatestShotsToImport(); i++) {
+        try {
+          const GaggimateShotDataEntry = new GaggimateShotData();
 
-          // Load the slog samples and the notes
-          const shotData = await this.gaggimateDevice.getShotSlog(data.id);
+          const data = recentShotsArray[i];
 
-          GaggimateShotDataEntry.brewFlow =
-            GaggimateDevice.returnBrewFlowForShotData(shotData.samples);
+          if (data !== null) {
+            // TODO : For future release, if a shot has been already imported ask if it should be imported again (id check)
+            GaggimateShotDataEntry.id = data.id;
+            GaggimateShotDataEntry.timestamp = data.timestamp;
+            GaggimateShotDataEntry.profile = data.profile;
+            GaggimateShotDataEntry.profileId = data.profileId;
+            GaggimateShotDataEntry.duration = data.duration;
+            GaggimateShotDataEntry.avgFlow = data.avgFlow;
+            GaggimateShotDataEntry.avgTemp = data.avgTemp;
+            GaggimateShotDataEntry.volume = data.volume;
+            GaggimateShotDataEntry.maxPressure = data.maxPressure;
+            GaggimateShotDataEntry.rating = data.rating ?? 0;
+            GaggimateShotDataEntry.incomplete = data.incomplete;
 
-          GaggimateShotDataEntry.notes =
-            await this.gaggimateDevice.getShotNotesFile(data.id);
+            // Load the slog samples and the notes
+            const shotData = await this.gaggimateDevice.getShotSlog(data.id);
 
-          if (data.hasNotes) {
-            // TODO: If the flag is correctly populated, we should load the notes only on true
+            GaggimateShotDataEntry.brewFlow =
+              GaggimateDevice.returnBrewFlowForShotData(shotData.samples);
+
+            GaggimateShotDataEntry.notes =
+              await this.gaggimateDevice.getShotNotesFile(data.id);
+
+            if (data.hasNotes) {
+              // TODO: For future release, if the flag is correctly populated, we should load the notes only on true
+            }
+
+            alldatatoPush.push(GaggimateShotDataEntry);
           }
-
-          alldatatoPush.push(GaggimateShotDataEntry);
+        } catch (error) {
+          // console.error(There was a problem with the fetch operation for id ${id}:, error);
         }
-      } catch (error) {
-        // console.error(There was a problem with the fetch operation for id ${id}:, error);
       }
     }
+
     /**We need to grab all data before we can push it else the virtual scrolling has issues **/
     this.history = alldatatoPush;
   }
