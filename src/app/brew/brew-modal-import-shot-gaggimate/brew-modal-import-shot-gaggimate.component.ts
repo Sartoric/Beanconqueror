@@ -109,6 +109,7 @@ export class BrewModalImportShotGaggimateComponent implements OnInit {
         'OK',
         true,
       );
+      return;
     }
 
     const recentShotsArray = JSON.parse(recentShots);
