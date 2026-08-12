@@ -1282,12 +1282,6 @@ export class BrewBrewingPreparationDeviceComponent
     }
 
     // Normalize shotData.rating and scale proportionally to the maximum rating and step
-    // const ratio = Math.min(Math.max(shotData.rating, 0), 5) / 5;
-    // const scaledValue = ratio * this.settings.brew_rating;
-    // const step = this.settings.brew_rating_steps;
-    // const rating =
-    //   step > 0 ? Math.min(Math.round(scaledValue / step) * step, this.settings.brew_rating,) : scaledValue;
-
     const minRating = -1;
     const maxRating = this.settings.brew_rating;
     const step = this.settings.brew_rating_steps;
