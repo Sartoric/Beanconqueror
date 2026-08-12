@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { CapacitorHttp, HttpResponse } from '@capacitor/core';
 import { padStart } from 'lodash';
 import moment from 'moment';
+import { stringify } from 'safe-stable-stringify';
 
 import { IGaggimateParams } from '../../../interfaces/preparationDevices/gaggimate/iGaggimateParams';
 import { IGaggimateShotNotes } from '../../../interfaces/preparationDevices/gaggimate/iGaggimateShotNotes';
@@ -56,12 +57,17 @@ export class GaggimateDevice extends PreparationDevice {
         connectTimeout: 5000,
       };
       const response: HttpResponse = await CapacitorHttp.get(options);
-      return (
-        response?.status === 200 && this.isNonEmptyJsonObject(response?.data)
-      );
+      if (
+        response?.status === 200 &&
+        this.isNonEmptyJsonObject(response?.data)
+      ) {
+        return true;
+      } else {
+        throw new Error('Invalid connection response');
+      }
     } catch (error) {
       this.logError('Error in connection:', error);
-      return false;
+      throw error;
     }
   }
 

@@ -152,7 +152,8 @@ export class BrewModalImportShotGaggimateComponent implements OnInit {
               await this.gaggimateDevice.getShotNotesFile(data.id);
 
             if (data.hasNotes) {
-              // TODO: For future release, if the flag is correctly populated, we should load the notes only on true
+              // console.log('has notes', data.id)
+              // TODO: For future release, when the flag will be correctly populated, we should load the notes only on true
             }
 
             alldatatoPush.push(GaggimateShotDataEntry);

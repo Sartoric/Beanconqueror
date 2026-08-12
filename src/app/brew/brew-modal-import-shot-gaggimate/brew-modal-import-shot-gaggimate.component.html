@@ -12,7 +12,7 @@
             <ion-item #ionItemEl tappable lines='full'>
               <ion-radio justify="start" label-placement="end" [value]='entry.id'>
                 <ion-grid class="no-ion-col-vertical-padding limit-grid-overflow">
-                <h2>{{entry.profile}}&nbsp;({{entry.id}})</h2>
+                <h3 class="ion-text-wrap">{{entry.profile}}&nbsp;({{entry.id}})</h3>
                 <div class='font-size-16'>{{this.uiHelper.formateDate(entry.timestamp)}}</div>
                 </ion-grid>
                 <graph-display-card [chartWidth]='getElementOffsetWidth()' [gaggimateHistoryData]='entry.brewFlow'></graph-display-card>
