@@ -302,6 +302,7 @@
         <ion-select [label]="'PREPARATION_DEVICE.TYPE_GAGGIMATE.CHOOSE_PROFILE' | translate"
                   label-placement="stacked"
                   [(ngModel)]="data.preparationDeviceBrew.params.chosenProfileId"
+                  (ionChange)="gaggimateProfileChanged()"
                   [placeholder]="'BREW.PLACE_HOLDER.BREW_DATA_PREPARATION_METHOD' | translate">
         <ion-select-option [value]="''">
           {{ "PREPARATION_DEVICE.TYPE_GAGGIMATE.NO_PROFILE" | translate }}
@@ -313,6 +314,31 @@
         }
       </ion-select>
       </ion-item>
+      @if (data.preparationDeviceBrew.params.chosenProfileId) {
+        @if (preparationDevice.isProfileActive(data.preparationDeviceBrew.params.chosenProfileId)) {
+          <!-- The values are adjusted on the GaggiMate step by step, like on its display -->
+          <ion-item lines="none">
+            <ion-label>{{ "PREPARATION_DEVICE.TYPE_GAGGIMATE.TARGET_TEMPERATURE" | translate }}</ion-label>
+            <ion-button slot="end" fill="outline" size="small" (click)="changeGaggimateTargetTemperature(false)">−</ion-button>
+            <span slot="end" class="gaggimate-target-value">{{ preparationDevice.getTargetTemperature() }} °C</span>
+            <ion-button slot="end" fill="outline" size="small" (click)="changeGaggimateTargetTemperature(true)">+</ion-button>
+          </ion-item>
+          <ion-item lines="none">
+            @if (preparationDevice.isBrewTargetWeight()) {
+              <ion-label>{{ "PREPARATION_DEVICE.TYPE_GAGGIMATE.TARGET_WEIGHT" | translate }}</ion-label>
+            } @else {
+              <ion-label>{{ "PREPARATION_DEVICE.TYPE_GAGGIMATE.TARGET_DURATION" | translate }}</ion-label>
+            }
+            <ion-button slot="end" fill="outline" size="small" (click)="changeGaggimateBrewTarget(false)">−</ion-button>
+            <span slot="end" class="gaggimate-target-value">{{ preparationDevice.getBrewTarget() }} {{ preparationDevice.isBrewTargetWeight() ? 'g' : 's' }}</span>
+            <ion-button slot="end" fill="outline" size="small" (click)="changeGaggimateBrewTarget(true)">+</ion-button>
+          </ion-item>
+        } @else {
+          <ion-item (click)="activateGaggimateProfile()" button tappable lines="none">
+            <ion-label class="ion-text-wrap">{{ "PREPARATION_DEVICE.TYPE_GAGGIMATE.ACTIVATE_PROFILE" | translate }}</ion-label>
+          </ion-item>
+        }
+      }
     </ion-card>
   } @else if (isMove2Device(preparationDevice)) {
       <ion-card class="popover" style="display:flex; flex-direction: column;">
