@@ -804,9 +804,8 @@ export class GaggimateDevice extends PreparationDevice {
   }
 
   public disconnectSocket() {
-    if (this.gaggimateSocket.isConnected) {
-      this.gaggimateSocket.disconnect();
-    }
+    // Also stops pending reconnect attempts, if the socket is not connected right now
+    this.gaggimateSocket.disconnect();
     this._isConnected = false;
   }
 
