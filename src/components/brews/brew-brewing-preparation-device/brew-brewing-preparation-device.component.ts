@@ -11,6 +11,7 @@ import {
 import { FormsModule } from '@angular/forms';
 
 import {
+  IonButton,
   IonCard,
   IonCardContent,
   IonCardHeader,
@@ -104,6 +105,7 @@ import { BrewBrewingComponent } from '../brew-brewing/brew-brewing.component';
     PreventCharacterDirective,
     RemoveEmptyNumberDirective,
     TranslatePipe,
+    IonButton,
     IonCard,
     IonItem,
     IonSelect,
@@ -539,6 +541,43 @@ export class BrewBrewingPreparationDeviceComponent
     this.activeConnectingDevice = undefined;
   }
 
+  /** The user chose a GaggiMate profile, so prepare the machine for it */
+  public async gaggimateProfileChanged() {
+    if (this.data.preparationDeviceBrew.params.chosenProfileId) {
+      await this.activateGaggimateProfile();
+    }
+  }
+
+  public async activateGaggimateProfile() {
+    const device = this.preparationDevice as GaggimateDevice;
+    const profileId = this.data.preparationDeviceBrew.params.chosenProfileId;
+    if (!device || !profileId) {
+      return;
+    }
+    await this.uiAlert.showLoadingSpinner();
+    const activated = await device.activateProfile(profileId);
+    await this.uiAlert.hideLoadingSpinner();
+    if (!activated) {
+      await this.uiAlert.showMessage(
+        'PREPARATION_DEVICE.TYPE_GAGGIMATE.ERROR_CANNOT_SET_PROFILE_OR_BREW_MODE',
+        'CARE',
+        'OK',
+        true,
+      );
+    }
+    this.checkChanges();
+  }
+
+  public changeGaggimateTargetTemperature(_raise: boolean) {
+    (this.preparationDevice as GaggimateDevice)?.changeTargetTemperature(
+      _raise,
+    );
+  }
+
+  public changeGaggimateBrewTarget(_raise: boolean) {
+    (this.preparationDevice as GaggimateDevice)?.changeBrewTarget(_raise);
+  }
+
   public async ngOnDestroy() {
     await this.disconnectCurrentDevice();
   }
@@ -964,9 +1003,9 @@ export class BrewBrewingPreparationDeviceComponent
       await connectedDevice.connectToSocket().then(async (_connected) => {
         if (_connected) {
           this.preparationDevice = connectedDevice;
-          await this.preparationDevice.cancelConfirmation(); // Send a preventive cancel request to avoid getting stuck if GM is showing the brew confirmation screen due to some warning
+          // Opening a brew only reads from the GaggiMate. The machine is switched to brew
+          // mode not before a profile is chosen or the shot is started from the app.
           await this.preparationDevice.loadProfiles();
-          await this.preparationDevice.selectBrewMode(); // set brew mode so to speed up actions on timer start
           /**Check if this profile is still existing, if yes, preset, if not cancel**/
           const profileFound = this.preparationDevice
             .getProfiles()

@@ -261,6 +261,85 @@ export class GaggimateDevice extends PreparationDevice {
     return undefined;
   }
 
+  /**
+   * Switches the GaggiMate to brew mode and selects the given profile, if this
+   * is not already the case. Only called when the user actively chooses a
+   * profile, so just opening a brew does not wake up the machine.
+   */
+  public async activateProfile(_profileId: string): Promise<boolean> {
+    if (!_profileId) {
+      return false;
+    }
+    const status = this.getActualShotData();
+    if (status?.mode !== this.MODE_BREW && !(await this.selectBrewMode())) {
+      return false;
+    }
+    if (
+      this.getActualShotData()?.selectedProfileId !== _profileId &&
+      !(await this.selectProfileByID(_profileId))
+    ) {
+      return false;
+    }
+    return true;
+  }
+
+  /** True if the machine is in brew mode with the given profile selected */
+  public isProfileActive(_profileId: string): boolean {
+    const status = this.getActualShotData();
+    return (
+      !!_profileId &&
+      status?.mode === this.MODE_BREW &&
+      status?.selectedProfileId === _profileId
+    );
+  }
+
+  public getTargetTemperature(): number {
+    return (
+      Math.round((this.getActualShotData()?.targetTemperature ?? 0) * 10) / 10
+    );
+  }
+
+  /**
+   * The brew target of the selected profile: the target weight if the profile
+   * stops by weight and a scale is available, otherwise the total duration.
+   */
+  public isBrewTargetWeight(): boolean {
+    return !!this.getActualShotData()?.brewTarget;
+  }
+
+  public getBrewTarget(): number {
+    const status = this.getActualShotData();
+    const target = this.isBrewTargetWeight()
+      ? status?.targetWeight
+      : status?.brewTargetDuration;
+    return Math.round((target ?? 0) * 10) / 10;
+  }
+
+  /**
+   * GaggiMate only supports changing the target temperature (1 °C) and the
+   * brew target (1 g or 1 s) step by step, like the buttons on its display.
+   * The change is applied to the selected profile until it is selected again.
+   */
+  public changeTargetTemperature(_raise: boolean) {
+    try {
+      this.gaggimateSocket.send({
+        tp: _raise ? 'req:raise-temp' : 'req:lower-temp',
+      });
+    } catch (ex) {
+      this.logError('Error in changeTargetTemperature:', ex);
+    }
+  }
+
+  public changeBrewTarget(_raise: boolean) {
+    try {
+      this.gaggimateSocket.send({
+        tp: _raise ? 'req:raise-brew-target' : 'req:lower-brew-target',
+      });
+    } catch (ex) {
+      this.logError('Error in changeBrewTarget:', ex);
+    }
+  }
+
   public static returnBrewFlowForShotData(samples, version: number) {
     const brewFlow = new BrewFlow();
     const newMoment = moment(new Date()).startOf('day');
@@ -461,40 +540,23 @@ export class GaggimateDevice extends PreparationDevice {
   }
 
   /**
-   * Sends a request to the GaggiMate websocket and resolves with the response
-   * which carries the same request id.
+   * Runs the given action on the websocket of this device. If the socket is not
+   * open yet (e.g. when a brew is synced after it was saved), it is opened just
+   * for this action and closed afterwards.
    */
-  private sendSocketRequest(request: Record<string, unknown>): Promise<any> {
-    return new Promise((resolve, reject) => {
-      const rid = `bc-${Date.now()}-${Math.round(Math.random() * 100000)}`;
-      const socket = new WebSocket(
-        this.connectionURL.replace(/^http/i, 'ws') + '/ws',
-      );
-      const timeout = setTimeout(() => {
-        socket.close();
-        reject(new Error('GaggiMate websocket request timed out'));
-      }, 5000);
-      socket.onopen = () => {
-        socket.send(JSON.stringify({ ...request, rid: rid }));
-      };
-      socket.onmessage = (event) => {
-        try {
-          // The socket also streams status events, we just wait for our answer
-          const message = JSON.parse(event.data);
-          if (message?.rid === rid) {
-            clearTimeout(timeout);
-            socket.close();
-            resolve(message);
-          }
-        } catch {
-          // Not a JSON message, ignore it
-        }
-      };
-      socket.onerror = () => {
-        clearTimeout(timeout);
-        reject(new Error('GaggiMate websocket connection failed'));
-      };
-    });
+  private async withSocket<T>(action: () => Promise<T>): Promise<T> {
+    const wasConnected = this.gaggimateSocket.isConnected;
+    if (!wasConnected && !(await this.connectToSocket(5000))) {
+      this.gaggimateSocket.disconnect();
+      throw new Error('GaggiMate websocket connection failed');
+    }
+    try {
+      return await action();
+    } finally {
+      if (!wasConnected) {
+        this.disconnectSocket();
+      }
+    }
   }
 
   /**
@@ -529,7 +591,14 @@ export class GaggimateDevice extends PreparationDevice {
     id: number,
     values: GaggimateShotNotes,
   ): Promise<boolean> {
-    const response = await this.sendSocketRequest({
+    return this.withSocket(() => this.addMissingShotNotesOnSocket(id, values));
+  }
+
+  private async addMissingShotNotesOnSocket(
+    id: number,
+    values: GaggimateShotNotes,
+  ): Promise<boolean> {
+    const response = await this.gaggimateSocket.request({
       tp: 'req:history:notes:get',
       id: String(id),
     });
@@ -575,7 +644,7 @@ export class GaggimateDevice extends PreparationDevice {
       notes.ratio = (doseOut / doseIn).toFixed(2);
     }
 
-    const saveResponse = await this.sendSocketRequest({
+    const saveResponse = await this.gaggimateSocket.request({
       tp: 'req:history:notes:save',
       id: String(id),
       notes: notes,
@@ -735,13 +804,14 @@ export class GaggimateDevice extends PreparationDevice {
   }
 
   public disconnectSocket() {
-    if (this.gaggimateSocket.isConnected) {
-      this.gaggimateSocket.disconnect();
-    }
+    // Also stops pending reconnect attempts, if the socket is not connected right now
+    this.gaggimateSocket.disconnect();
     this._isConnected = false;
   }
 
-  public async connectToSocket(): Promise<boolean> {
+  public async connectToSocket(
+    timeoutMs = this.SOCKET_POST_MODE_SETTLE_MS,
+  ): Promise<boolean> {
     try {
       if (this.gaggimateSocket.isConnected) {
         this._isConnected = true;
@@ -751,7 +821,7 @@ export class GaggimateDevice extends PreparationDevice {
       this.gaggimateSocket.connect(this.connectionToWsURL);
 
       const startTime = Date.now();
-      while (Date.now() - startTime < this.SOCKET_POST_MODE_SETTLE_MS) {
+      while (Date.now() - startTime < timeoutMs) {
         if (this.gaggimateSocket.isConnected) {
           this._isConnected = true;
           return true;

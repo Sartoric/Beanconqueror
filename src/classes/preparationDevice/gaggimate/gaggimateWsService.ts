@@ -1,5 +1,3 @@
-import { book } from 'ionicons/icons';
-
 import { UILog } from '../../../services/uiLog';
 import { GaggimateWarnings, parseWarningStates } from './gaggimateWarnings';
 
@@ -172,11 +170,22 @@ export class GaggimateWsService {
         this.socket.close();
       }
 
-      this.socket = new WebSocket(this.url);
-      this.socket.addEventListener('message', this._onMessage.bind(this));
-      this.socket.addEventListener('close', this._onClose.bind(this));
-      this.socket.addEventListener('error', this._onError.bind(this));
-      this.socket.addEventListener('open', this._onOpen.bind(this));
+      const socket = new WebSocket(this.url);
+      this.socket = socket;
+      // Events of a replaced or closed socket must not change the state of the current one
+      const isCurrent = () => this.socket === socket;
+      socket.addEventListener('message', (event) => {
+        if (isCurrent()) this._onMessage(event);
+      });
+      socket.addEventListener('close', () => {
+        if (isCurrent()) this._onClose();
+      });
+      socket.addEventListener('error', (event) => {
+        if (isCurrent()) this._onError(event);
+      });
+      socket.addEventListener('open', () => {
+        if (isCurrent()) this._onOpen();
+      });
     } catch (error) {
       this._logError('WebSocket connection error:', error);
       this.isConnecting = false;
@@ -185,6 +194,8 @@ export class GaggimateWsService {
   }
 
   disconnect(): void {
+    // Without an url no reconnect is scheduled anymore
+    this.url = null;
     if (this.reconnectTimeout) {
       this._log('Timeout ', this.reconnectTimeout);
       clearTimeout(this.reconnectTimeout);
@@ -194,8 +205,10 @@ export class GaggimateWsService {
     if (this.socket) {
       this.socket.close();
       this._log('WebSocket disconnecting');
+      // The close event of this socket is ignored from now on, so clean up here
       this.socket = null;
     }
+    this._rejectPendingRequests();
     this.isConnecting = false;
     this.machineState = { ...this.machineState, connected: false };
   }
@@ -219,12 +232,22 @@ export class GaggimateWsService {
     this.isConnecting = false;
     this.machineState = { ...this.machineState, connected: false };
 
-    // Immediately reject pending requests so they don't wait for timeouts
+    this._rejectPendingRequests();
+
+    // The connection was lost (e.g. GaggiMate restarted or WiFi dropped) and not closed
+    // on purpose via disconnect(), so try to connect again
+    if (this.url) {
+      this._scheduleReconnect();
+    }
+  }
+
+  // Immediately reject pending requests so they don't wait for timeouts
+  private _rejectPendingRequests(): void {
     if (this.activeRequests.size > 0) {
       this._log(
         `Cleaning up ${this.activeRequests.size} pending requests due to socket close`,
       );
-      for (const [rid, rejectRequest] of this.activeRequests) {
+      for (const rejectRequest of this.activeRequests.values()) {
         rejectRequest(new Error('WebSocket connection closed'));
       }
       this.activeRequests.clear();
@@ -287,10 +310,6 @@ export class GaggimateWsService {
     if (message.tp === 'evt:brew:confirm:cancel') {
       this.machineState.isWarning = false;
       this._log('brew confirm cancelled', message.tp);
-    }
-
-    if (message.tp === 'evt:brew:started') {
-      this._log('brew started', message.warn);
     }
 
     if (message.tp === 'evt:shot-finished-stats') {
