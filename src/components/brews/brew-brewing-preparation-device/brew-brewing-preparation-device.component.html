@@ -317,7 +317,7 @@
       @if (data.preparationDeviceBrew.params.chosenProfileId) {
         <div>
           <!-- The values are adjusted on the GaggiMate step by step, like on its display -->
-          <ion-accordion-group (ionChange)="activateGaggimateProfile()"
+          <ion-accordion-group (ionChange)="gaggimateBrewTargetsToggled($event)"
                                value="{{preparationDevice.isActiveOnProfile(data.preparationDeviceBrew.params.chosenProfileId) ? 'gaggimate-brew-targets' : '' }}">
             <ion-accordion value="gaggimate-brew-targets">
 

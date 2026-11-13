@@ -150,6 +150,8 @@ export class GaggimateWsService {
 
   connect(url: string): void {
     this.url = url;
+    // A new connection may be reconnected again if it gets lost
+    this.isIntentionalClose = false;
     this._log('Apiservice connecting to', url);
     this._connect();
   }
@@ -209,7 +211,8 @@ export class GaggimateWsService {
     }
     this.isConnecting = false;
     this.machineState = { ...this.machineState, connected: false };
-    this.rejectActiveRequests(); // TODO : Check if this stops the brew when exiting the brew page and socket close
+    // Only rejects the pending promises in the app, nothing is sent to the GaggiMate
+    this.rejectActiveRequests();
   }
 
   private rejectActiveRequests() {

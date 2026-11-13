@@ -19,7 +19,7 @@ import { GaggimateStatus, GaggimateWsService } from './gaggimateWsService';
 declare var cordova;
 
 export class GaggimateDevice extends PreparationDevice {
-  private DO_DEBUG = true;
+  private DO_DEBUG = false;
   private SOCKET_POST_MODE_SETTLE_MS = 1500;
 
   private parser = new GaggimateParser();
