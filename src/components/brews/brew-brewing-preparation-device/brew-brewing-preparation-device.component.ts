@@ -1004,11 +1004,23 @@ export class BrewBrewingPreparationDeviceComponent
     }
   }
 
-  public async activateGaggimateProfile() {
+  /** Activate the profile only when the brew targets get expanded, not when collapsed */
+  public async gaggimateBrewTargetsToggled(_event: CustomEvent) {
+    if (_event.detail?.value !== 'gaggimate-brew-targets') {
+      return;
+    }
+    const activated = await this.activateGaggimateProfile();
+    if (!activated) {
+      // Don't show the targets of a profile which is not active on the GaggiMate
+      (_event.target as HTMLIonAccordionGroupElement).value = undefined;
+    }
+  }
+
+  public async activateGaggimateProfile(): Promise<boolean> {
     const device = this.preparationDevice as GaggimateDevice;
     const profileId = this.data.preparationDeviceBrew.params.chosenProfileId;
     if (!device || !profileId) {
-      return;
+      return false;
     }
     await this.uiAlert.showLoadingSpinner();
     const activated = await device.activateOnProfile(profileId);
@@ -1022,6 +1034,7 @@ export class BrewBrewingPreparationDeviceComponent
       );
     }
     this.checkChanges();
+    return activated;
   }
 
   public changeGaggimateTargetTemperature(_raise: boolean) {
